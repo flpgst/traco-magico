@@ -2,6 +2,8 @@
 
 App infantil (PWA) para ensinar o traçado correto das letras bastão e dos números.
 
+**Jogar online:** [https://flpgst.github.io/traco-magico/](https://flpgst.github.io/traco-magico/)
+
 ## Como usar no celular
 
 1. Abra o app no navegador do celular (Chrome ou Safari).
@@ -19,6 +21,14 @@ App infantil (PWA) para ensinar o traçado correto das letras bastão e dos núm
 6. Completou a letra → **Parabéns!** e estrelas ⭐
 
 A dica 💡 mostra o caminho uma vez.
+
+## Publicação (GitHub Pages)
+
+O site é publicado automaticamente em `main` via GitHub Actions.
+
+Se ainda não estiver no ar, ative uma vez em
+[Settings → Pages](https://github.com/flpgst/traco-magico/settings/pages):
+**Source** = **GitHub Actions**.
 
 ## Rodar no computador
 
