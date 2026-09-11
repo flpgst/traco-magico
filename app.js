@@ -3,9 +3,16 @@
 
   const STORAGE_KEY = "traco-magico-v1";
   const LETTER_BOX = { w: 100, h: 130 };
-  const HIT_RADIUS = 16;
-  const START_RADIUS = 22;
-  const COMPLETE_RATIO = 0.86;
+  // Tolerances in letter-box units (scaled to canvas). Kids need a wide corridor —
+  // success is stroke order + rough placement, not sitting on the guide pixel-perfect.
+  const HIT_RADIUS_UNITS = 14;
+  const START_RADIUS_UNITS = 18;
+  const BACKTRACK_ALLOW = 0.14;
+  const COMPLETE_RATIO = 0.78;
+  // When matching the finger to the guide, only consider points near current progress
+  // so self-crossing strokes (B, 8, O…) don't snap to the wrong segment.
+  const PROGRESS_LOOKBACK = 0.06;
+  const PROGRESS_LOOKAHEAD = 0.42;
 
   const state = {
     mode: "letters", // letters | numbers
@@ -195,9 +202,35 @@
     return densify(stroke.map(toCanvas), 3);
   }
 
-  function nearestOnPath(path, point) {
-    let best = { dist: Infinity, index: 0 };
-    for (let i = 0; i < path.length; i++) {
+  function hitRadiusPx() {
+    return Math.max(28, HIT_RADIUS_UNITS * layout.scale);
+  }
+
+  function startRadiusPx() {
+    return Math.max(36, START_RADIUS_UNITS * layout.scale);
+  }
+
+  /**
+   * Nearest densified guide point to `point`.
+   * When `fromProgress` is set, search only a forward window along the path so
+   * two nearby segments of the *same* stroke (self-cross / revisit) do not steal
+   * the match and look like a wrong collision.
+   */
+  function nearestOnPath(path, point, fromProgress = null) {
+    if (!path.length) return { dist: Infinity, index: 0 };
+
+    let start = 0;
+    let end = path.length - 1;
+    if (fromProgress != null && path.length > 1) {
+      const n = path.length - 1;
+      start = Math.max(0, Math.floor((fromProgress - PROGRESS_LOOKBACK) * n));
+      end = Math.min(n, Math.ceil((fromProgress + PROGRESS_LOOKAHEAD) * n));
+      // Near the end of the stroke, keep the window open to the finish.
+      if (fromProgress > 0.7) end = n;
+    }
+
+    let best = { dist: Infinity, index: start };
+    for (let i = start; i <= end; i++) {
       const d = Math.hypot(path[i].x - point.x, path[i].y - point.y);
       if (d < best.dist) best = { dist: d, index: i };
     }
@@ -396,16 +429,17 @@
 
     const pt = fromEvent(e);
     const path = strokeCanvasPoints(data.strokes[state.strokeIndex]);
-    const near = nearestOnPath(path, pt);
+    // Restrict start matching to the beginning of the stroke (order).
+    const near = nearestOnPath(path, pt, 0);
 
-    if (near.dist > START_RADIUS || near.index > path.length * 0.18) {
+    if (near.dist > startRadiusPx() || near.index > path.length * 0.22) {
       showError("Comece na bolinha vermelha!");
       return;
     }
 
     state.drawing = true;
     state.userPath = [pt];
-    state.progress = near.index / (path.length - 1);
+    state.progress = near.index / Math.max(1, path.length - 1);
   }
 
   function onPointerMove(e) {
@@ -414,9 +448,10 @@
     const data = currentCharData();
     const path = strokeCanvasPoints(data.strokes[state.strokeIndex]);
     const pt = fromEvent(e);
-    const near = nearestOnPath(path, pt);
+    // Progress-windowed match: same-stroke self-crossings must not invalidate.
+    const near = nearestOnPath(path, pt, state.progress);
 
-    if (near.dist > HIT_RADIUS) {
+    if (near.dist > hitRadiusPx()) {
       state.drawing = false;
       state.userPath = [];
       state.progress = 0;
@@ -425,9 +460,9 @@
       return;
     }
 
-    // must mostly move forward along the path
-    const nextProgress = near.index / (path.length - 1);
-    if (nextProgress + 0.08 < state.progress) {
+    // Order: mostly move forward along the path (small backtrack allowed).
+    const nextProgress = near.index / Math.max(1, path.length - 1);
+    if (nextProgress + BACKTRACK_ALLOW < state.progress) {
       state.drawing = false;
       state.userPath = [];
       state.progress = 0;
