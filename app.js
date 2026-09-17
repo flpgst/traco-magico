@@ -15,7 +15,7 @@
   const PROGRESS_LOOKAHEAD = 0.42;
 
   const state = {
-    mode: "letters", // letters | numbers
+    mode: "letters", // letters | cursive | numbers
     char: "A",
     strokeIndex: 0,
     progress: 0,
@@ -81,17 +81,34 @@
     if (name === "play") el.play.classList.add("active");
   }
 
+  function progressKey(ch = state.char) {
+    return state.mode === "cursive" ? `cursive:${ch}` : ch;
+  }
+
   function charsForMode() {
-    return state.mode === "letters" ? LETTERS : NUMBERS;
+    if (state.mode === "cursive") return CURSIVE_LETTERS;
+    if (state.mode === "numbers") return NUMBERS;
+    return LETTERS;
+  }
+
+  function modeTitle() {
+    if (state.mode === "cursive") return "Cursiva";
+    if (state.mode === "numbers") return "Números";
+    return "Alfabeto";
   }
 
   function renderGrid() {
-    el.gridTitle.textContent = state.mode === "letters" ? "Alfabeto" : "Números";
+    el.gridTitle.textContent = modeTitle();
     el.starsCount.textContent = String(state.stars);
     el.charGrid.innerHTML = "";
+    el.charGrid.classList.toggle("cursive-mode", state.mode === "cursive");
     charsForMode().forEach((ch) => {
       const btn = document.createElement("button");
-      btn.className = "char-card" + (state.doneMap[ch] ? " done" : "");
+      const done = !!state.doneMap[progressKey(ch)];
+      btn.className =
+        "char-card" +
+        (done ? " done" : "") +
+        (state.mode === "cursive" ? " cursive-glyph" : "");
       btn.type = "button";
       btn.textContent = ch;
       btn.addEventListener("click", () => {
@@ -106,6 +123,7 @@
     state.char = ch;
     resetTrace(false);
     el.playTitle.textContent = ch;
+    el.playTitle.classList.toggle("play-title-cursive", state.mode === "cursive");
     el.btnNext.hidden = true;
     showScreen("play");
     resizeCanvas();
@@ -123,6 +141,7 @@
   }
 
   function currentCharData() {
+    if (state.mode === "cursive") return STROKE_DATA_CURSIVE[state.char];
     return STROKE_DATA[state.char];
   }
 
@@ -352,14 +371,42 @@
     roundRect(ctx, 0, 0, layout.cssW, layout.cssH, 28);
     ctx.fill();
 
-    // soft lined paper
-    ctx.strokeStyle = "rgba(125, 170, 200, 0.18)";
-    ctx.lineWidth = 1;
-    for (let y = 48; y < layout.cssH - 20; y += 28) {
+    if (state.mode === "cursive" && typeof CURSIVE_TOP === "number") {
+      const lines = [
+        { y: CURSIVE_TOP, alpha: 0.28 },
+        { y: CURSIVE_MID, alpha: 0.22, dash: true },
+        { y: CURSIVE_BASE, alpha: 0.34 },
+        { y: CURSIVE_DESC, alpha: 0.2 },
+      ];
+      lines.forEach((line) => {
+        const y = layout.oy + line.y * layout.scale;
+        ctx.strokeStyle = `rgba(125, 170, 200, ${line.alpha})`;
+        ctx.lineWidth = line.y === CURSIVE_BASE ? 1.5 : 1;
+        if (line.dash) ctx.setLineDash([5, 5]);
+        else ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(18, y);
+        ctx.lineTo(layout.cssW - 18, y);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      // margem rosa suave, como no caderno
+      ctx.strokeStyle = "rgba(232, 120, 140, 0.28)";
+      ctx.lineWidth = 1.5;
+      const mx = layout.ox + 8 * layout.scale;
       ctx.beginPath();
-      ctx.moveTo(18, y);
-      ctx.lineTo(layout.cssW - 18, y);
+      ctx.moveTo(mx, 18);
+      ctx.lineTo(mx, layout.cssH - 18);
       ctx.stroke();
+    } else {
+      ctx.strokeStyle = "rgba(125, 170, 200, 0.18)";
+      ctx.lineWidth = 1;
+      for (let y = 48; y < layout.cssH - 20; y += 28) {
+        ctx.beginPath();
+        ctx.moveTo(18, y);
+        ctx.lineTo(layout.cssW - 18, y);
+        ctx.stroke();
+      }
     }
     ctx.restore();
   }
@@ -506,15 +553,20 @@
   }
 
   function finishChar() {
-    const firstTime = !state.doneMap[state.char];
-    state.doneMap[state.char] = true;
+    const key = progressKey();
+    const firstTime = !state.doneMap[key];
+    state.doneMap[key] = true;
     const earned = firstTime ? 3 : 1;
     state.stars += earned;
     save();
     Sounds.success();
+    const label =
+      state.mode === "cursive"
+        ? `letra ${state.char}`
+        : state.char;
     el.successMsg.textContent = firstTime
-      ? `Você traçou o ${state.char} certinho!`
-      : `De novo! O ${state.char} ficou perfeito!`;
+      ? `Você traçou o ${label} certinho!`
+      : `De novo! O ${label} ficou perfeito!`;
     el.earnedStars.textContent = "⭐".repeat(earned);
     el.overlay.hidden = false;
     el.btnNext.hidden = false;

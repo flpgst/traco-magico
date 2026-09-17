@@ -1,7 +1,7 @@
 {
   "name": "Traço Mágico",
   "short_name": "Traço Mágico",
-  "description": "Aprenda o traçado correto das letras e números brincando!",
+  "description": "Aprenda o traçado correto das letras bastão, cursivas e números brincando!",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
