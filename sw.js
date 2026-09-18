@@ -1,10 +1,11 @@
-const CACHE = "traco-magico-v2";
+const CACHE = "traco-magico-v3";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./strokes.js",
+  "./strokes-cursive.js",
   "./sounds.js",
   "./manifest.json",
   "./icons/icon.svg",

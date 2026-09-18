@@ -234,6 +234,11 @@ button[hidden] {
   color: #fff;
 }
 
+.btn-cursive {
+  background: linear-gradient(180deg, #7BB8F5, #4A8FE0);
+  color: #fff;
+}
+
 .btn-soft {
   background: var(--paper);
   color: var(--ink);
@@ -321,6 +326,22 @@ button[hidden] {
 }
 
 .char-card:active { transform: scale(0.94); }
+
+.char-card.cursive-glyph {
+  font-family: "Caveat", "Fredoka", cursive;
+  font-size: clamp(1.7rem, 7.5vw, 2.35rem);
+  font-weight: 700;
+}
+
+.char-grid.cursive-mode {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.play-title-cursive {
+  font-family: "Caveat", "Fredoka", cursive !important;
+  font-size: 2rem !important;
+  font-weight: 700;
+}
 
 .char-card.done::after {
   content: "★";
