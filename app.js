@@ -86,7 +86,13 @@
   }
 
   function charsForMode() {
-    if (state.mode === "cursive") return CURSIVE_LETTERS;
+    if (state.mode === "cursive") {
+      if (typeof CURSIVE_LETTERS === "undefined") {
+        console.error("strokes-cursive.js não carregou");
+        return LETTERS;
+      }
+      return CURSIVE_LETTERS;
+    }
     if (state.mode === "numbers") return NUMBERS;
     return LETTERS;
   }
@@ -605,7 +611,9 @@
     btn.addEventListener("click", () => {
       Sounds.unlock();
       Sounds.tap();
-      state.mode = btn.getAttribute("data-go");
+      const mode = btn.getAttribute("data-go");
+      if (mode !== "letters" && mode !== "cursive" && mode !== "numbers") return;
+      state.mode = mode;
       renderGrid();
       showScreen("grid");
     });
@@ -676,7 +684,15 @@
   });
 
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+    navigator.serviceWorker.register("./sw.js").then((reg) => {
+      reg.update().catch(() => {});
+    }).catch(() => {});
   }
 
   loadSave();
